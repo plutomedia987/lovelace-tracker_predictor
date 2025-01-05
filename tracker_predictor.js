@@ -48,6 +48,16 @@ class TrackerPredictorCard extends LitElement {
   }
 
   static getStubConfig(hass, entities, entitiesFallback) {
+    const entity = Object.keys(hass.states).find((eid) =>
+      Object.keys(hass.states[eid].attributes).some(
+        (aid) => aid == "attribution"
+      )
+    );
+
+    // console.log(entity);
+
+    // const stations = Object.keys(entity.attributes.dests);
+
     return {
       entity: entity,
       low_price: 15,
