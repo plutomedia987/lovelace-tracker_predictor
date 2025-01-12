@@ -60,8 +60,12 @@ class TrackerPredictorCard extends LitElement {
 
     return {
       entity: entity,
-      low_price: 15,
-      mid_price: 23,
+      electric_low_price: 15,
+      electric_mid_price: 23,
+      gas_low_price: 5,
+      gas_mid_price: 5.5,
+      gas_bodge: 0,
+      electric_bodge: 0
      };
   }
 
@@ -160,15 +164,42 @@ class TrackerPredictorCard extends LitElement {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Sep", "Oct", "Nov", "Dec"];
 
-    this.stateAttr["data"].forEach(row => {
+    let data = []
+
+    this.stateAttr["electric_data"].forEach(electric_item => {
+      data.push({
+        "date": electric_item["date"],
+        "electric_price": (electric_item["octopus_price"] + this._config.electric_bodge).toFixed(2),
+        "gas_price": ""
+      })
+    })
+
+    this.stateAttr["gas_data"].forEach((gas_item) => {
+      data.forEach((data_item, index) => {
+        if (data_item["date"] == gas_item["date"]) {
+          data[index]["gas_price"] = (gas_item["octopus_price"] + this._config.gas_bodge).toFixed(2)
+          // break;
+        }
+      })
+    })
+
+
+    data.forEach(row => {
 
       let date = new Date(Date.parse(row["date"]));
 
-      let level_class = "prediction-price-high";
-      if (row["octopus_price"] <= this._config.low_price) {
-        level_class = "prediction-price-low";
-      } else if (row["octopus_price"] <= this._config.mid_price) {
-        level_class = "prediction-price-mid";
+      let electric_level_class = "prediction-price-high";
+      if (row["electric_price"] <= this._config.electric_low_price) {
+        electric_level_class = "prediction-price-low";
+      } else if (row["electric_price"] <= this._config.electric_mid_price) {
+        electric_level_class = "prediction-price-mid";
+      }
+
+      let gas_level_class = "prediction-price-high";
+      if (row["gas_price"] <= this._config.gas_low_price) {
+        gas_level_class = "prediction-price-low";
+      } else if (row["gas_price"] <= this._config.gas_mid_price) {
+        gas_level_class = "prediction-price-mid";
       }
 
       rows.push(html`
@@ -176,8 +207,11 @@ class TrackerPredictorCard extends LitElement {
           <td class="prediction-date">
             ${days[date.getDay()]} ${date.getDate()}${this._getOrdinal(date.getDate())} ${months[date.getMonth()]}
           </td>
-          <td class="prediction-price ${level_class} prediction-round-right">
-            ${row["octopus_price"].toFixed(2)}
+          <td class="prediction-price ${electric_level_class}">
+            ${row["electric_price"]}
+          </td>
+          <td class="prediction-price prediction-round-right ${gas_level_class}">
+            ${row["gas_price"]}
           </td>
         </tr>
       `);
@@ -188,6 +222,7 @@ class TrackerPredictorCard extends LitElement {
         <tr>
           <th></th>
           <th>Electric Price (p)</th>
+          <th>Gas Price (p)</th>
         </tr>
         ${rows}
       </table>
@@ -199,9 +234,11 @@ class TrackerPredictorCard extends LitElement {
       return html``;
     }
 
+    // console.log(this.hass)
+
     if (Object.keys(this.hass.states).includes(this._config.entity)) {
       this.entityObj = this.hass.states[this._config.entity];
-      if (Object.keys(this.entityObj).includes("attributes") && Object.keys(this.entityObj.attributes).includes("data")) {
+      if (Object.keys(this.entityObj).includes("attributes") && Object.keys(this.entityObj.attributes).includes("electric_data")) {
         this.stateAttr = this.entityObj["attributes"];
         return html`
           <ha-card>
@@ -267,10 +304,18 @@ class TrackerPredictorCardEditor extends LitElement {
           )} (${this.hass.localize(
             "ui.panel.lovelace.editor.card.config.required"
           )})`;
-        case "low_price":
-          return "Low Price";
-        case "mid_price":
-          return "Mid Price";
+          case "electric_low_price":
+            return "Electric Low Price";
+          case "electric_mid_price":
+            return "Electric Mid Price";
+          case "gas_low_price":
+            return "Gas Low Price";
+          case "gas_mid_price":
+            return "Gas Mid Price";
+          case "electric_bodge":
+            return "Electric Offset Value";
+          case "gas_bodge":
+            return "Gas Offset Value";
         default:
           return schema.name;
       }
@@ -293,14 +338,34 @@ class TrackerPredictorCardEditor extends LitElement {
         selector: { entity: { domain: "sensor" } },
       },
       {
-        name: "low_price",
+        name: "electric_low_price",
         required: true,
-        selector: { number: {mode:"box", min: 1, max: 100} },
+        selector: { number: {mode:"box", min: -20, max: 100, native_step: 0.1} },
       },
       {
-        name: "mid_price",
+        name: "electric_mid_price",
         required: true,
-        selector: { number: {mode:"box", min: 1, max: 100} },
+        selector: { number: {mode:"box", min: -20, max: 100, native_step: 0.1} },
+      },
+      {
+        name: "gas_low_price",
+        required: true,
+        selector: { number: {mode:"box", min: 1, max: 20, native_step: 0.1} },
+      },
+      {
+        name: "gas_mid_price",
+        required: true,
+        selector: { number: {mode:"box", min: 1, max: 20, native_step: 0.1} },
+      },
+      {
+        name: "electric_bodge",
+        required: true,
+        selector: { number: {mode:"box", min: -100, max: 100, native_step: 0.01} },
+      },
+      {
+        name: "gas_bodge",
+        required: true,
+        selector: { number: {mode:"box", min: -100, max: 100, native_step: 0.01} },
       }
     ];
 
