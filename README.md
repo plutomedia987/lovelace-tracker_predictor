@@ -25,6 +25,10 @@ Anything higher than the mid price is highlighted in red
 ```yaml
 type: custom:tracker-prediction-card
 entity: sensor.octo_tracker_14_predic_december_2023_east_england
-low_price: 19
-mid_price: 23
+electric_low_price: 15,
+electric_mid_price: 23,
+gas_low_price: 5,
+gas_mid_price: 5.5,
+gas_bodge: 1.2,   # Set offset value. Not sure why I need these at the mo.
+electric_bodge: 3.9
 ```
